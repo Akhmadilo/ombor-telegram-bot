@@ -82,10 +82,17 @@ async function generateChartScreenshot(chartId, days = 0) {
     
     // 2. Navigate to URL
     console.log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 35000 });
     
-    // 3. Wait for networkidle0 + 3 seconds (for ChartJS animations)
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for the chart element to mount in DOM
+    try {
+      await page.waitForSelector(`#${chartId}`, { timeout: 15000 });
+    } catch (e) {
+      console.warn(`Element #${chartId} not found within 15s timeout, falling back.`);
+    }
+
+    // Wait 2 seconds for ChartJS render animations
+    await new Promise(r => setTimeout(r, 2000));
     
     // 4. Find element with id='{chartId}' on the page
     const element = await page.$(`#${chartId}`);
