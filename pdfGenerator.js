@@ -1,13 +1,32 @@
 const puppeteer = require('puppeteer');
 
+const getLaunchOptions = () => {
+  const options = {
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-extensions',
+    ],
+    headless: true,
+  };
+
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    options.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  return options;
+};
+
 async function generateDashboardPDF(url) {
   let browser;
   try {
-    // Launch puppeteer
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true,
-    });
+    // Launch puppeteer with optimized settings for Render/Docker/Linux
+    browser = await puppeteer.launch(getLaunchOptions());
     const page = await browser.newPage();
     
     // Set a good viewport size for the dashboard layout
@@ -70,11 +89,8 @@ async function generateChartScreenshot(chartId, days = 0) {
   
   let browser;
   try {
-    // 1. Launch puppeteer headless
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true,
-    });
+    // 1. Launch puppeteer with optimized settings for Render/Docker/Linux
+    browser = await puppeteer.launch(getLaunchOptions());
     const page = await browser.newPage();
     
     // Make sure viewport is 1440x900, deviceScaleFactor: 2

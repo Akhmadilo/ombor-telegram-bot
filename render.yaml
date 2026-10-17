@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ombor-telegram-bot
+    env: docker
+    plan: free
+    region: frankfurt
+    autoDeploy: true
+    healthCheckPath: /
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DASHBOARD_URL
+        value: https://ombor-dashboard.vercel.app
+      - key: ALLOWED_USERS
+        sync: false
+      - key: PORT
+        value: 3000

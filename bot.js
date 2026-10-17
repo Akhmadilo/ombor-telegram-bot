@@ -11,9 +11,33 @@ if (!token) {
   process.exit(1);
 }
 
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token, {
+  polling: {
+    autoStart: true,
+    params: {
+      timeout: 10,
+    },
+  },
+});
 
-console.log('Bot is running...');
+// Resilient error handlers so the bot never crashes on network glitches
+bot.on('polling_error', (error) => {
+  console.warn(`[Telegram Polling Warning] (${new Date().toLocaleTimeString()}):`, error.code || error.message);
+});
+
+bot.on('error', (error) => {
+  console.error('[Telegram Bot Error]:', error.message);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Unhandled Rejection]:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception]:', err.message);
+});
+
+console.log('Ombor Telegram Bot is running...');
 
 // Middleware to check allowed users
 const isAllowed = (msg) => {
@@ -252,9 +276,37 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// Dummy Express server for Render port binding
+// Express server for Render port binding and Health check
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('Bot is running...'));
-app.listen(port, () => console.log(`Dummy server listening on port ${port}`));
+
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Ombor Telegram Bot',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    allowedUsersCount: allowedUsers.length,
+    dashboardUrl,
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Web/Health server listening on port ${port}`);
+});
+
+// 24/7 Keep-Alive: Render free tier sleeps after 15 min if no web requests.
+// This self-ping pings itself every 10 minutes to stay awake 24/7.
+const keepAliveUrl = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL;
+if (keepAliveUrl) {
+  console.log(`Setting up 24/7 keep-alive self-ping for ${keepAliveUrl} every 10 min...`);
+  setInterval(async () => {
+    try {
+      const res = await fetch(keepAliveUrl);
+      console.log(`[24/7 KeepAlive] Pinged ${keepAliveUrl} - Status: ${res.status}`);
+    } catch (e) {
+      console.warn(`[24/7 KeepAlive Warning]:`, e.message);
+    }
+  }, 10 * 60 * 1000);
+}
