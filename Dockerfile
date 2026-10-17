@@ -1,15 +1,13 @@
-FROM node:20-bullseye-slim
+FROM node:20-slim
 
-# Install system Chromium, fonts, and dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install system Chromium and fonts
+RUN apt-get update && apt-get install -y --fix-missing \
     chromium \
     fonts-liberation \
-    fonts-noto-color-emoji \
-    fonts-freefont-ttf \
     ca-certificates \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Skip downloading bundled Chrome in npm, use system chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
