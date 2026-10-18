@@ -30,11 +30,20 @@ async function generateDashboardPDF(url) {
     // Set a good viewport size for the dashboard layout
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
     
-    // Navigate to the dashboard
+    // Navigate to the dashboard with domcontentloaded
     console.log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
     
-    // Optional: wait a bit more for ChartJS animations to finish
+    // Wait for content (table, matrix, or charts) to mount in DOM
+    try {
+      await page.waitForSelector('.data-table, .matrix-table, .chart-card, .table-section', { timeout: 25000 });
+      // Wait until loading indicator is gone
+      await page.waitForFunction(() => !document.querySelector('.loading-screen'), { timeout: 20000 });
+    } catch (e) {
+      console.warn('Selector wait warning in generateDashboardPDF:', e.message);
+    }
+
+    // Wait 2 seconds for ChartJS animations to finish
     await new Promise(r => setTimeout(r, 2000));
     
     // Hide unnecessary elements in the PDF like the header/download buttons (if needed)
@@ -96,17 +105,18 @@ async function generateChartScreenshot(chartId, days = 0) {
     
     // 2. Navigate to URL
     console.log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
     
-    // Wait for the chart element to mount in DOM
+    // Wait for the chart element to mount in DOM and loading to finish
     try {
       await page.waitForSelector(`#${chartId}`, { timeout: 20000 });
+      await page.waitForFunction(() => !document.querySelector('.loading-screen'), { timeout: 20000 });
     } catch (e) {
-      console.warn(`Element #${chartId} not found within 20s timeout, falling back.`);
+      console.warn(`Element #${chartId} wait warning:`, e.message);
     }
 
-    // Wait 2.5 seconds for ChartJS render animations
-    await new Promise(r => setTimeout(r, 2500));
+    // Wait 2 seconds for ChartJS render animations
+    await new Promise(r => setTimeout(r, 2000));
     
     // 4. Find element with id='{chartId}' on the page
     const element = await page.$(`#${chartId}`);
