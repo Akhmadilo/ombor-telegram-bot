@@ -266,10 +266,13 @@ bot.on('callback_query', async (query) => {
 
       await bot.sendPhoto(chatId, nodeBuffer, {
         caption: captionMap[rawId] || `📊 Grafik: ${rawId}`
+      }, {
+        filename: `${rawId}.png`,
+        contentType: 'image/png'
       });
       bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {});
     } catch (err) {
-      console.error(err);
+      console.error(`[Chart Error for ${rawId}]:`, err.message, err.stack);
       bot.sendMessage(chatId, "❌ Xatolik yuz berdi. Grafikni yuklab olishning iloji bo'lmadi.");
       bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {});
     }

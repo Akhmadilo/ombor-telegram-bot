@@ -2,17 +2,15 @@ const puppeteer = require('puppeteer');
 
 const getLaunchOptions = () => {
   const options = {
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
       '--disable-extensions',
+      '--font-render-hinting=none',
     ],
-    headless: true,
   };
 
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -93,36 +91,35 @@ async function generateChartScreenshot(chartId, days = 0) {
     browser = await puppeteer.launch(getLaunchOptions());
     const page = await browser.newPage();
     
-    // Make sure viewport is 1440x900, deviceScaleFactor: 2
-    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+    // Make sure viewport is 1440x900, deviceScaleFactor: 1.5 (memory efficient for Render 512MB RAM)
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1.5 });
     
     // 2. Navigate to URL
     console.log(`Navigating to ${url}...`);
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 35000 });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
     
     // Wait for the chart element to mount in DOM
     try {
-      await page.waitForSelector(`#${chartId}`, { timeout: 15000 });
+      await page.waitForSelector(`#${chartId}`, { timeout: 20000 });
     } catch (e) {
-      console.warn(`Element #${chartId} not found within 15s timeout, falling back.`);
+      console.warn(`Element #${chartId} not found within 20s timeout, falling back.`);
     }
 
-    // Wait 2 seconds for ChartJS render animations
-    await new Promise(r => setTimeout(r, 2000));
+    // Wait 2.5 seconds for ChartJS render animations
+    await new Promise(r => setTimeout(r, 2500));
     
     // 4. Find element with id='{chartId}' on the page
     const element = await page.$(`#${chartId}`);
     
     let imageBuffer;
     if (element) {
-      // 5. Take element screenshot (NOT full page) as PNG with deviceScaleFactor: 2
+      // 5. Take element screenshot as PNG
       imageBuffer = await element.screenshot({ type: 'png' });
     } else {
       // If element not found, take full page screenshot as fallback
       imageBuffer = await page.screenshot({ type: 'png', fullPage: true });
     }
     
-    // 6. Return the PNG buffer
     return imageBuffer;
   } catch (error) {
     console.error('Error generating screenshot:', error);
